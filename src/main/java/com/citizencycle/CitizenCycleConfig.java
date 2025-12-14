@@ -51,7 +51,7 @@ public interface CitizenCycleConfig extends Config
 	)
 	default String getEndpoint()
 	{
-		return "https://citizen-cycle.up.railway.app/api/citizens";
+		return "https://citizen-cycle-production.up.railway.app/api/citizens";
 	}
 
 	@ConfigItem(
