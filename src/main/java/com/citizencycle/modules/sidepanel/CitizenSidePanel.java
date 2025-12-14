@@ -187,7 +187,7 @@ public class CitizenSidePanel extends PluginPanel
 		else if (status.isInOptimalHopWindow())
 		{
 			long secondsUntil = status.getSecondsUntilNextDistraction();
-			statusText = "HOP NOW! ~" + secondsUntil + "s until distraction";
+			statusText = "HOP NOW! ~" + secondsUntil + "s";
 			statusColor = new Color(255, 200, 0);
 		}
 		else if (status.getSecondsSinceDistractionEnded() >= 50)
