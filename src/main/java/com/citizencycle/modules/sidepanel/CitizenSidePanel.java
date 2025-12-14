@@ -32,6 +32,17 @@ public class CitizenSidePanel extends PluginPanel
 	private List<CitizenStatus> citizenStatuses = new ArrayList<>();
 	private Map<Integer, World> worldMap = new java.util.HashMap<>();
 
+	// Filter toggles
+	private boolean showHopNow = true;
+	private boolean showApproaching = true;
+	private boolean showDistracted = true;
+	private boolean showWaiting = true;
+
+	private JToggleButton hopNowBtn;
+	private JToggleButton approachingBtn;
+	private JToggleButton distractedBtn;
+	private JToggleButton waitingBtn;
+
 	public CitizenSidePanel(Consumer<Integer> worldHopCallback)
 	{
 		this.worldHopCallback = worldHopCallback;
@@ -40,21 +51,67 @@ public class CitizenSidePanel extends PluginPanel
 		setBorder(new EmptyBorder(10, 10, 10, 10));
 		setBackground(ColorScheme.DARK_GRAY_COLOR);
 
-		JPanel headerPanel = new JPanel(new BorderLayout());
+		JPanel headerPanel = new JPanel();
+		headerPanel.setLayout(new BoxLayout(headerPanel, BoxLayout.Y_AXIS));
 		headerPanel.setBackground(ColorScheme.DARK_GRAY_COLOR);
 
 		JLabel titleLabel = new JLabel("Citizen Cycle");
 		titleLabel.setForeground(Color.WHITE);
 		titleLabel.setFont(titleLabel.getFont().deriveFont(Font.BOLD, 16f));
-		headerPanel.add(titleLabel, BorderLayout.NORTH);
+		titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+		headerPanel.add(titleLabel);
 
 		statusLabel = new JLabel("Waiting for data...");
 		statusLabel.setForeground(ColorScheme.LIGHT_GRAY_COLOR);
-		headerPanel.add(statusLabel, BorderLayout.CENTER);
+		statusLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+		headerPanel.add(statusLabel);
 
 		errorLabel = new JLabel("");
 		errorLabel.setForeground(Color.RED);
-		headerPanel.add(errorLabel, BorderLayout.SOUTH);
+		errorLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+		headerPanel.add(errorLabel);
+
+		headerPanel.add(Box.createRigidArea(new Dimension(0, 8)));
+
+		// Filter buttons panel
+		JPanel filterPanel = new JPanel(new GridLayout(2, 2, 4, 4));
+		filterPanel.setBackground(ColorScheme.DARK_GRAY_COLOR);
+		filterPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+		filterPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 60));
+
+		hopNowBtn = createFilterButton("Hop Now", new Color(255, 200, 0), true);
+		approachingBtn = createFilterButton("Approaching", Color.YELLOW, true);
+		distractedBtn = createFilterButton("Distracted", Color.GREEN, true);
+		waitingBtn = createFilterButton("Waiting", Color.GRAY, true);
+
+		hopNowBtn.addActionListener(e -> {
+			showHopNow = hopNowBtn.isSelected();
+			updateFilterButtonStyle(hopNowBtn, new Color(255, 200, 0), showHopNow);
+			rebuild();
+		});
+		approachingBtn.addActionListener(e -> {
+			showApproaching = approachingBtn.isSelected();
+			updateFilterButtonStyle(approachingBtn, Color.YELLOW, showApproaching);
+			rebuild();
+		});
+		distractedBtn.addActionListener(e -> {
+			showDistracted = distractedBtn.isSelected();
+			updateFilterButtonStyle(distractedBtn, Color.GREEN, showDistracted);
+			rebuild();
+		});
+		waitingBtn.addActionListener(e -> {
+			showWaiting = waitingBtn.isSelected();
+			updateFilterButtonStyle(waitingBtn, Color.GRAY, showWaiting);
+			rebuild();
+		});
+
+		filterPanel.add(hopNowBtn);
+		filterPanel.add(approachingBtn);
+		filterPanel.add(distractedBtn);
+		filterPanel.add(waitingBtn);
+
+		headerPanel.add(filterPanel);
+		headerPanel.add(Box.createRigidArea(new Dimension(0, 8)));
 
 		add(headerPanel, BorderLayout.NORTH);
 
@@ -68,6 +125,49 @@ public class CitizenSidePanel extends PluginPanel
 		scrollPane.getVerticalScrollBar().setUnitIncrement(16);
 
 		add(scrollPane, BorderLayout.CENTER);
+	}
+
+	private JToggleButton createFilterButton(String text, Color color, boolean selected)
+	{
+		JToggleButton btn = new JToggleButton(text, selected);
+		btn.setFocusPainted(false);
+		btn.setFont(btn.getFont().deriveFont(Font.BOLD, 10f));
+		updateFilterButtonStyle(btn, color, selected);
+		return btn;
+	}
+
+	private void updateFilterButtonStyle(JToggleButton btn, Color color, boolean selected)
+	{
+		if (selected)
+		{
+			btn.setBackground(color.darker().darker());
+			btn.setForeground(color);
+		}
+		else
+		{
+			btn.setBackground(ColorScheme.DARKER_GRAY_COLOR);
+			btn.setForeground(ColorScheme.MEDIUM_GRAY_COLOR);
+		}
+	}
+
+	private boolean shouldShowStatus(CitizenStatus status)
+	{
+		if (status.isInOptimalHopWindow())
+		{
+			return showHopNow;
+		}
+		else if (status.isApproaching())
+		{
+			return showApproaching;
+		}
+		else if (status.isDistracted())
+		{
+			return showDistracted;
+		}
+		else
+		{
+			return showWaiting;
+		}
 	}
 
 	public void setWorldList(List<World> worlds)
@@ -225,6 +325,12 @@ public class CitizenSidePanel extends PluginPanel
 		for (CitizenStatus status : sortedStatuses)
 		{
 			if (status.isStale())
+			{
+				continue;
+			}
+
+			// Apply filter toggles
+			if (!shouldShowStatus(status))
 			{
 				continue;
 			}
