@@ -1,9 +1,34 @@
-.gradle
-build
+# Gradle
+.gradle/
+build/
+out/
+
+# IDE
 .idea/
+*.iml
 .project
 .settings/
 .classpath
 nbactions.xml
 nb-configuration.xml
 nbproject/
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# RuneLite
+runelite-client/
+
+# Node.js (server)
+server/node_modules/
+server/.env
+server/*.log
+
+# Logs
+*.log
+logs/
+
+# Local config
+*.local
