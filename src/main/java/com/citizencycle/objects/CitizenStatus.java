@@ -12,8 +12,8 @@ public class CitizenStatus
 	// Distraction cycle is approximately 80-85 seconds total
 	// Distraction lasts ~12-17 seconds, then ~68 seconds until next distraction
 	public static final int DISTRACTION_CYCLE_SECONDS = 83;
-	public static final int OPTIMAL_HOP_WINDOW_START = 68; // seconds after distraction ended
-	public static final int OPTIMAL_HOP_WINDOW_END = 83;   // seconds after distraction ended
+	public static final int OPTIMAL_HOP_WINDOW_START = 58; // ~25s until distraction - HOP NOW
+	public static final int APPROACHING_WINDOW_START = 40; // ~43s until distraction - Approaching
 
 	private int world;
 	private boolean distracted;
@@ -80,7 +80,7 @@ public class CitizenStatus
 	}
 
 	/**
-	 * Returns true if this world is in the optimal hop window (5-15 seconds until distraction).
+	 * Returns true if this world is in the optimal hop window (~25s+ after distraction ended).
 	 */
 	public boolean isInOptimalHopWindow()
 	{
@@ -93,14 +93,29 @@ public class CitizenStatus
 		{
 			return false;
 		}
-		return secondsSinceEnd >= OPTIMAL_HOP_WINDOW_START && secondsSinceEnd <= OPTIMAL_HOP_WINDOW_END;
+		return secondsSinceEnd >= OPTIMAL_HOP_WINDOW_START;
+	}
+
+	/**
+	 * Returns true if approaching optimal window (~40-58s after distraction ended).
+	 */
+	public boolean isApproaching()
+	{
+		if (distracted)
+		{
+			return false;
+		}
+		long secondsSinceEnd = getSecondsSinceDistractionEnded();
+		if (secondsSinceEnd < 0)
+		{
+			return false;
+		}
+		return secondsSinceEnd >= APPROACHING_WINDOW_START && secondsSinceEnd < OPTIMAL_HOP_WINDOW_START;
 	}
 
 	/**
 	 * Returns a priority score for sorting. Lower = higher priority.
-	 * Worlds in optimal hop window get highest priority.
-	 * Then worlds approaching the window.
-	 * Currently distracted worlds are lower priority (you'd miss the distraction).
+	 * Priority: 1) HOP NOW (optimal window), 2) Approaching, 3) Distracted, 4) Waiting
 	 */
 	public int getPriorityScore()
 	{
@@ -109,32 +124,33 @@ public class CitizenStatus
 			return Integer.MAX_VALUE;
 		}
 
-		// Currently distracted - low priority (you'd arrive after it ends)
-		if (distracted)
-		{
-			return 1000;
-		}
-
 		long secondsSinceEnd = getSecondsSinceDistractionEnded();
-		if (secondsSinceEnd < 0)
-		{
-			return Integer.MAX_VALUE - 1; // No data
-		}
 
-		// In optimal window (78-93s) - highest priority
+		// In optimal window - highest priority (HOP NOW)
 		if (isInOptimalHopWindow())
 		{
-			// Within window, prioritize those closer to distraction
-			return (int) (OPTIMAL_HOP_WINDOW_END - secondsSinceEnd);
+			// Within window, prioritize those who've been waiting longer
+			return (int) (100 - secondsSinceEnd);
 		}
 
-		// Approaching window (50-68s) - medium priority
-		if (secondsSinceEnd >= 50 && secondsSinceEnd < OPTIMAL_HOP_WINDOW_START)
+		// Approaching window - second priority
+		if (isApproaching())
 		{
-			return 100 + (int) (OPTIMAL_HOP_WINDOW_START - secondsSinceEnd);
+			return 200 + (int) (OPTIMAL_HOP_WINDOW_START - secondsSinceEnd);
 		}
 
-		// Recently ended distraction (0-50s) - lower priority, need to wait
-		return 500 + (int) (50 - secondsSinceEnd);
+		// Currently distracted - third priority
+		if (distracted)
+		{
+			return 300;
+		}
+
+		// Waiting (recently ended, 0-40s) - lowest priority
+		if (secondsSinceEnd >= 0)
+		{
+			return 400 + (int) (APPROACHING_WINDOW_START - secondsSinceEnd);
+		}
+
+		return Integer.MAX_VALUE - 1; // No data
 	}
 }

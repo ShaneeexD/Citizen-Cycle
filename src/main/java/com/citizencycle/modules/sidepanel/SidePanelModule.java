@@ -116,7 +116,17 @@ public class SidePanelModule extends PluginModuleContract
 	{
 		if (event.getGameState() == GameState.LOGGED_IN)
 		{
+			updatePlayerTotalLevel();
 			SwingUtilities.invokeLater(() -> sidePanel.rebuild());
+		}
+	}
+
+	private void updatePlayerTotalLevel()
+	{
+		if (client.getLocalPlayer() != null)
+		{
+			int totalLevel = client.getTotalLevel();
+			sidePanel.setPlayerTotalLevel(totalLevel);
 		}
 	}
 
